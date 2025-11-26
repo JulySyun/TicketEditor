@@ -1,0 +1,5 @@
+{
+  "name": "Thermal Ticket Simulator",
+  "description": "A web-based thermal printer ticket editor and simulator. Supports ESC/POS command simulation, C# code generation/parsing, and project management.",
+  "requestFramePermissions": []
+}
