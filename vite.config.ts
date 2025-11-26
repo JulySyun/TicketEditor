@@ -7,6 +7,6 @@ export default defineConfig({
   // IMPORTANT: This must match your repository name for GitHub Pages to work
   base: '/TicketEditor/',
   build: {
-    outDir: 'dist',
+    outDir: 'docs', // Change dist to docs so GitHub Pages can serve it easily
   }
 });

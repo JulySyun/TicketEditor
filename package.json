@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "homepage": "https://julysyun.github.io/TicketEditor/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
