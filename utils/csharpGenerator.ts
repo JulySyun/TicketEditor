@@ -1,35 +1,59 @@
+
 import { TicketElement, Alignment, FontSize } from '../types';
 
-export const generateCSharp = (elements: TicketElement[]): string => {
-  let code = `Encoding BIG5 = Encoding.GetEncoding("big5");\n`;
-  code += `BinaryOut(0x1B, 0x40);  // 重置出票機\n`;
-  code += `BinaryOut(0x1B, 0x02);  // 整頁模式\n\n`;
+export interface CodeLine {
+  text: string;
+  elementId?: string; // The ID of the element that generated this line
+}
 
-  let currentAlign: Alignment = 'left';
+export const generateCSharp = (elements: TicketElement[]): CodeLine[] => {
+  const lines: CodeLine[] = [];
+  
+  // Helper to push line
+  const addLine = (text: string, id?: string) => lines.push({ text, elementId: id });
+
+  addLine(`Encoding BIG5 = Encoding.GetEncoding("big5");\n`);
+  addLine(`BinaryOut(0x1B, 0x40);  // 重置出票機`);
+  addLine(`BinaryOut(0x1B, 0x02);  // 整頁模式\n`);
+
+  // Initialize as null so the first element ALWAYS generates an alignment command
+  let currentAlign: Alignment | null = null;
   let currentBold = false;
   let currentSize: FontSize = 'normal';
 
   elements.forEach((el) => {
     // 1. Handle Alignment
-    if (el.align !== currentAlign) {
-      let alignVal = 0;
+    // We check if alignment has changed.
+    // SPECIAL CASE: If it is an Overlay element (Negative Spacing), we MUST force the alignment command.
+    // This ensures that the Overlay operation (which depends on print head position) starts from the correct alignment anchor.
+    const isOverlay = el.type === 'spacing' && (el.spacingHeight || 0) < 0;
+
+    if (el.align !== currentAlign || isOverlay) {
+      let alignHex = '0x00';
       let alignComment = '文字置左';
-      if (el.align === 'center') { alignVal = 1; alignComment = '文字置中'; }
-      if (el.align === 'right') { alignVal = 2; alignComment = '文字置右'; }
       
-      code += `BinaryOut(0x1B, 0x61, ${alignVal});  // ${alignComment}\n`;
+      if (el.align === 'center') { alignHex = '0x01'; alignComment = '文字置中'; }
+      else if (el.align === 'right') { alignHex = '0x02'; alignComment = '文字置右'; }
+      // else left is 0x00
+      
+      addLine(`BinaryOut(0x1B, 0x61, ${alignHex});  // ${alignComment}`, el.id);
       currentAlign = el.align;
     }
 
     // 2. Handle Content
     if (el.type === 'spacing') {
-      // Realign logic check (Specific to example logic about 0x4B 170, but we just use spacing for now)
-      if (el.spacingHeight && el.spacingHeight > 0) {
-        code += `BinaryOut(0x1B, 0x4A, ${el.spacingHeight});\n`;
+      const h = el.spacingHeight || 0;
+      if (h < 0) {
+        // Negative Spacing = Move Up (0x1B, 0x4B)
+        const originalVal = Math.abs(h);
+        
+        addLine(`BinaryOut(0x1B, 0x4B, ${originalVal});   // 重新對齊圖框起始位置 (Overlay)`, el.id);
+      } else if (h > 0) {
+        addLine(`BinaryOut(0x1B, 0x4A, ${h});`, el.id);
       }
     } else if (el.type === 'image') {
        const name = el.variableName || "image.bin";
-       code += `BinaryOut(File.ReadAllBytes(Path.Combine(GlobalVariable.TicketLogoFolder, "${name}")));  // 載入圖片\n`;
+       addLine(`BinaryOut(File.ReadAllBytes(Path.Combine(GlobalVariable.TicketLogoFolder, "${name}")));  // 載入圖片`, el.id);
     } else if (el.type === 'text') {
       
       let textStr = el.content;
@@ -38,42 +62,39 @@ export const generateCSharp = (elements: TicketElement[]): string => {
       const stringLiteral = hasVar ? `$"{textStr}"` : `"${textStr}"`;
 
       // Check for size change or specific "Large Line" pattern
-      // The example shows large text lines often combined in one command:
-      // BinaryOut(0x1D, 0x21, 0x01, BIG5.GetBytes(...));
-      
       if (el.size === 'large') {
-          // Explicit bold check for large text if needed, but example shows independent bold commands usually
+          // Explicit bold check for large text
           if (el.isBold && !currentBold) {
-             code += `BinaryOut(0x1B, 0x45, 0x01); //加粗\n`;
+             addLine(`BinaryOut(0x1B, 0x45, 0x01); //加粗`, el.id);
              currentBold = true;
           } else if (!el.isBold && currentBold) {
-             code += `BinaryOut(0x1B, 0x45, 0x00); //取消加粗\n`;
+             addLine(`BinaryOut(0x1B, 0x45, 0x00); //取消加粗`, el.id);
              currentBold = false;
           }
 
-          code += `BinaryOut(0x1D, 0x21, 0x01, BIG5.GetBytes(${stringLiteral}));\n`;
+          addLine(`BinaryOut(0x1D, 0x21, 0x01, BIG5.GetBytes(${stringLiteral}));`, el.id);
           currentSize = 'large'; // The command sets it to large
       } else {
           // Normal size
           if (currentSize === 'large') {
-             code += `BinaryOut(0x1D, 0x21, 0x00); //文字大小恢復\n`;
+             addLine(`BinaryOut(0x1D, 0x21, 0x00); //文字大小恢復`, el.id);
              currentSize = 'normal';
           }
 
           if (el.isBold && !currentBold) {
-             code += `BinaryOut(0x1B, 0x45, 0x01); //加粗\n`;
+             addLine(`BinaryOut(0x1B, 0x45, 0x01); //加粗`, el.id);
              currentBold = true;
           } else if (!el.isBold && currentBold) {
-             code += `BinaryOut(0x1B, 0x45, 0x00); //取消加粗\n`;
+             addLine(`BinaryOut(0x1B, 0x45, 0x00); //取消加粗`, el.id);
              currentBold = false;
           }
 
-          code += `BinaryOut(BIG5.GetBytes(${stringLiteral}));\n`;
+          addLine(`BinaryOut(BIG5.GetBytes(${stringLiteral}));`, el.id);
       }
     }
   });
 
   // Footer / Cut
-  code += `\nBinaryOut(0x1B, 0x4A, 88, 0x1D, 0x56, 0); // 切紙\n`;
-  return code;
+  addLine(`\nBinaryOut(0x1B, 0x4A, 88, 0x1D, 0x56, 0); // 切紙`);
+  return lines;
 };
