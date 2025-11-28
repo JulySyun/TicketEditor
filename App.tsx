@@ -8,6 +8,9 @@ import { parseCSharp } from './utils/csharpParser';
 import { generateCSharp, CodeLine } from './utils/csharpGenerator';
 import JSZip from 'jszip';
 
+// Use new URL pattern to resolve asset path reliably for both Dev and Production (GitHub Pages)
+const iconLogo = new URL('./iconlogo.ico', import.meta.url).href;
+
 // 1. Initial Elements
 const INITIAL_ELEMENTS: TicketElement[] = [];
 
@@ -350,7 +353,7 @@ function App() {
       <header className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-30">
          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg shadow-sm flex items-center justify-center bg-white border border-slate-200 overflow-hidden">
-                <img src="iconlogo.ico" alt="Logo" className="w-full h-full object-contain" />
+                <img src={iconLogo} alt="Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="font-bold text-slate-700 text-lg hidden sm:block tracking-tight">CS Ticket Sim</h1>
             <div className="h-6 w-px bg-slate-200 mx-2"></div>
