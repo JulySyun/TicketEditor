@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Save, FolderOpen, Code, FileText, Image as ImageIcon, Copy, ArrowDownToLine, MoveVertical, Printer } from 'lucide-react';
+import { Save, FolderOpen, Code, FileText, Image as ImageIcon, Copy, ArrowDownToLine, MoveVertical } from 'lucide-react';
 import TicketPreview from './components/TicketPreview';
 import EditorPanel from './components/EditorPanel';
 import { TicketElement, TicketProject, DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_PREVIEW_OVERLAY_SCALE } from './types';
@@ -349,9 +349,9 @@ function App() {
       {/* Top Bar */}
       <header className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-30">
          <div className="flex items-center gap-3">
-				<div className="w-8 h-8 ... (保留或修改樣式)">
-					<img src="iconlogo.ico" alt="Logo" className="w-full h-full object-contain" />
-				</div>
+            <div className="w-8 h-8 rounded-lg shadow-sm flex items-center justify-center bg-white border border-slate-200 overflow-hidden">
+                <img src="iconlogo.ico" alt="Logo" className="w-full h-full object-contain" />
+            </div>
             <h1 className="font-bold text-slate-700 text-lg hidden sm:block tracking-tight">CS Ticket Sim</h1>
             <div className="h-6 w-px bg-slate-200 mx-2"></div>
             <div className="flex items-center bg-slate-100 rounded-md px-2 py-1">
